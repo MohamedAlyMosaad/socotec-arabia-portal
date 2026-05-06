@@ -30,12 +30,8 @@ def read_excel_from_sharepoint(file_path: str, sheet_name=0, site_url=SHAREPOINT
     """
     try:
         ctx = get_context(site_url)
-        file_buffer = io.BytesIO()
-        ctx.web.get_file_by_server_relative_url(file_path).download(file_buffer).execute_query()
-        file_buffer.seek(0)
-        df = pd.read_excel(file_buffer, sheet_name=sheet_name)
-        
-
+        response = ctx.web.get_file_by_server_relative_url(file_path).download().execute_query()
+        df = pd.read_excel(io.BytesIO(response.content), sheet_name=sheet_name)
         return df
     except Exception as e:
         st.error(f"Could not read {file_path}: {e}")
