@@ -156,6 +156,8 @@ active_tl = st.session_state.active_tl
 my_team   = next(t for t in ALL_TEAMS if t["tl"] == active_tl)
 initials  = "".join(w[0] for w in active_tl.split()[:2]).upper()
 today     = date.today()
+import calendar
+day_name = calendar.day_name[today.weekday()]
 DAYS      = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
 MONTHS    = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
 date_str  = f"{day_name[:3]} {today.day} {MONTHS[today.month-1]}"
