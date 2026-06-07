@@ -405,75 +405,7 @@ if new_tl != active_tl:
 active_tl = st.session_state.active_tl
 my_team   = next((t for t in ALL_TEAMS if t["tl"] == active_tl), ALL_TEAMS[0])
 
-# ══════════════════════════════════════════════════════════════════
-# PIN GATE — self-service: first visit = create PIN, later = enter PIN
-# ══════════════════════════════════════════════════════════════════
-if not _is_auth(active_tl):
-    has_pin = _has_pin_set(active_tl)
-
-    # ── Card UI ────────────────────────────────────────────────────
-    st.markdown("""
-    <div style="height:30px;"></div>
-    <div style="display:flex;justify-content:center;">
-      <div style="background:#1C1C2E;border-radius:20px;padding:40px 50px;
-                  max-width:360px;width:100%;text-align:center;
-                  box-shadow:0 8px 32px rgba(0,0,0,.5);">
-        <div style="font-size:44px;margin-bottom:14px;">""" +
-        ("🔒" if has_pin else "🔑") + """</div>
-        <div style="font-size:18px;font-weight:700;color:white;margin-bottom:6px;">"""
-        + active_tl + """</div>
-        <div style="font-size:13px;color:#90CAF9;margin-bottom:4px;">"""
-        + ("Enter your 4-digit PIN" if has_pin else "Create your 4-digit PIN") +
-        """</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col = st.columns([1, 2, 1])[1]
-    with col:
-        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-
-        if has_pin:
-            # ── ENTER EXISTING PIN ─────────────────────────────────
-            pin = st.text_input("PIN", type="password", max_chars=4,
-                                placeholder="● ● ● ●", label_visibility="collapsed",
-                                key="pin_enter")
-            if st.button("Unlock →", type="primary", use_container_width=True,
-                         key="pin_enter_btn"):
-                if _check_pin(active_tl, pin):
-                    _set_auth(active_tl)
-                    st.rerun()
-                else:
-                    st.error("❌ Incorrect PIN — try again")
-
-        else:
-            # ── CREATE NEW PIN (first time) ────────────────────────
-            st.markdown(
-                "<div style='font-size:12px;color:#90CAF9;text-align:center;"
-                "margin-bottom:8px;'>Choose a 4-digit PIN you will remember</div>",
-                unsafe_allow_html=True
-            )
-            new_pin  = st.text_input("New PIN", type="password", max_chars=4,
-                                      placeholder="● ● ● ●", label_visibility="collapsed",
-                                      key="pin_new")
-            conf_pin = st.text_input("Confirm PIN", type="password", max_chars=4,
-                                      placeholder="● ● ● ●", label_visibility="collapsed",
-                                      key="pin_confirm")
-            if st.button("Set PIN & Enter →", type="primary", use_container_width=True,
-                         key="pin_set_btn"):
-                if len(new_pin) != 4 or not new_pin.isdigit():
-                    st.error("❌ PIN must be exactly 4 digits")
-                elif new_pin != conf_pin:
-                    st.error("❌ PINs do not match — try again")
-                else:
-                    with st.spinner("Saving your PIN..."):
-                        ok = _save_pin_to_github(active_tl, _hash_pin(new_pin))
-                    if ok:
-                        _set_auth(active_tl)
-                        st.success("✅ PIN created! Welcome.")
-                        st.rerun()
-
-    st.stop()
+# (PIN gate is inside Claims tab only)
 
 # ── ATTENDANCE DATA ───────────────────────────────────────────────
 _att_fallback = {"checked_in":pd.DataFrame(),"exceptions":pd.DataFrame(),
@@ -609,6 +541,59 @@ elif st.session_state.page == "Attendance":
 # ══════════════════════════════════════════════════════════════════
 elif st.session_state.page == "Claims":
     is_admin = active_tl in (ADMIN_TL, "Nizar Lazreq")
+
+    # ── PIN gate — protects Claims tab only ───────────────────────
+    if not _is_auth(active_tl):
+        has_pin = _has_pin_set(active_tl)
+        st.markdown("""
+        <div style="height:20px;"></div>
+        <div style="display:flex;justify-content:center;">
+          <div style="background:#1C1C2E;border-radius:20px;padding:36px 48px;
+                      max-width:340px;width:100%;text-align:center;
+                      box-shadow:0 8px 32px rgba(0,0,0,.5);">
+            <div style="font-size:40px;margin-bottom:12px;">""" +
+            ("🔒" if has_pin else "🔑") + """</div>
+            <div style="font-size:17px;font-weight:700;color:white;margin-bottom:5px;">"""
+            + active_tl + """</div>
+            <div style="font-size:13px;color:#90CAF9;">"""
+            + ("Enter PIN to access Claims" if has_pin else "Create your PIN to access Claims") +
+            """</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        col = st.columns([1,2,1])[1]
+        with col:
+            st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+            if has_pin:
+                pin_val = st.text_input("PIN", type="password", max_chars=4,
+                                        placeholder="● ● ● ●", label_visibility="collapsed",
+                                        key="claims_pin_enter")
+                if st.button("Unlock →", type="primary", use_container_width=True,
+                             key="claims_pin_btn"):
+                    if _check_pin(active_tl, pin_val):
+                        _set_auth(active_tl); st.rerun()
+                    else:
+                        st.error("❌ Incorrect PIN")
+            else:
+                st.markdown("<div style='font-size:12px;color:#90CAF9;text-align:center;margin-bottom:6px;'>Choose a 4-digit PIN you will remember</div>", unsafe_allow_html=True)
+                p1 = st.text_input("New PIN", type="password", max_chars=4,
+                                    placeholder="● ● ● ●", label_visibility="collapsed",
+                                    key="claims_pin_new")
+                p2 = st.text_input("Confirm PIN", type="password", max_chars=4,
+                                    placeholder="● ● ● ●", label_visibility="collapsed",
+                                    key="claims_pin_confirm")
+                if st.button("Set PIN & Enter →", type="primary", use_container_width=True,
+                             key="claims_pin_set"):
+                    if len(p1) != 4 or not p1.isdigit():
+                        st.error("❌ Must be exactly 4 digits")
+                    elif p1 != p2:
+                        st.error("❌ PINs do not match")
+                    else:
+                        with st.spinner("Saving PIN..."):
+                            ok = _save_pin_to_github(active_tl, _hash_pin(p1))
+                        if ok:
+                            _set_auth(active_tl); st.success("✅ PIN set!"); st.rerun()
+        st.stop()
+
     st.markdown("""<div style="background:linear-gradient(135deg,#1565C0,#1976D2);
       border-radius:12px;padding:20px 24px;margin-bottom:20px;">
       <div style="font-size:11px;color:#90CAF9;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
